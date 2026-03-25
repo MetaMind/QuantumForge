@@ -1,0 +1,6 @@
+{
+  "description": "Build a complete Python microservice with FastAPI that implements a RESTful API for managing a distributed task queue with Redis backend, including: 1) Async task enqueue/dequeue endpoints, 2) Task status monitoring with WebSocket support, 3) Automatic retry logic with exponential backoff, 4) Rate limiting per client, 5) Comprehensive error handling and logging. Include unit tests and Dockerfile.",
+  "context": "Production-grade code with type hints, Pydantic models, proper dependency injection, and async/await patterns. Follow 12-factor app principles.",
+  "max_iterations": 5,
+  "parallel_candidates": 3
+}
