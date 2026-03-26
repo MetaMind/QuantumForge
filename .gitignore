@@ -1,122 +1,61 @@
-# =========================
-# 🐍 Python
-# =========================
+# Examples 1:
+# Project with only source/config files - no build artifacts, dependencies, or temp files
+
+# Example 2:
+# Project with artifacts
+*.pyc
 __pycache__/
-*.py[cod]
-*$py.class
-
-# Virtual environments
-venv/
-.env/
+*.o
+*.obj
+dist/
+build/
 .venv/
-env/
-ENV/
-
-# Distribution / packaging
-.Python
-build/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Logs
-*.log
-
-# Unit test / coverage
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# =========================
-# ⚛️ Node.js
-# =========================
+venv/
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Build outputs
-.next/
-out/
-build/
-dist/
-
-# =========================
-# 🧠 IDE / Editor
-# =========================
+*.tmp
+*.swp
+.env
+.env.local
+.env.*
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# =========================
-# 🖥️ OS files
-# =========================
+*.log
+coverage/
+htmlcov/
+.coverage
+.mypy_cache/
+.pytest_cache/
+target/
+.gradle/
+*.exe
+*.dll
+*.so
+*.a
+*.out
+*.class
+*.jar
+*.war
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 .DS_Store
 Thumbs.db
-
-# =========================
-# 🔐 Environment / Secrets
-# =========================
-.env
-.env.*
-*.key
-*.pem
-
-# =========================
-# 🧪 Temporary / Backup files
-# =========================
-*.tmp
-*.bak
-*.swp
-*.old
-*.old1
-*old
-*old1
-
-# =========================
-# 📦 Misc
-# =========================
-*.sqlite3
-*.db
-*.csv
-*.tsv
-data/
-
-# Ignore logs and temp folders
-logs/
-tmp/
-temp/
-
-# =========================
-# 🚀 Custom Project Rules
-# =========================
-# Ignore any file ending with old/old1 (your requirement)
-*old
-*old1
-*.old
-*.old1
-
-# Ignore local config overrides
-config.local.*
