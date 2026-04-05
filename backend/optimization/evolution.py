@@ -58,8 +58,8 @@ class PromptEvolution:
         # Sort by fitness
         self.population.sort(key=lambda x: x.score, reverse=True)
         
-        # Elitism: keep top 20%
-        elite_count = max(1, len(self.population) // 5)
+        # Elitism: keep top ~33% (minimum 2)
+        elite_count = max(2, len(self.population) // 3)
         new_population = self.population[:elite_count]
         
         # Generate offspring

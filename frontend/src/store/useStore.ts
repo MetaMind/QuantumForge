@@ -1,10 +1,20 @@
 import { create } from 'zustand'
 
+export interface Step {
+  step_id: string
+  description: string
+  status: string
+  attempts: Record<string, unknown>[]
+  best_attempt: number | null
+  created_at: string
+  completed_at: string | null
+}
+
 interface Task {
   task_id: string
   description: string
   status: string
-  steps: any[]
+  steps: Step[]
   final_output?: string
   metrics?: Record<string, number>
   created_at: string

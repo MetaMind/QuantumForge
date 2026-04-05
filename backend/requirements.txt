@@ -10,6 +10,8 @@ numpy==1.26.3
 faiss-cpu==1.7.4
 python-multipart==0.0.6
 structlog==24.1.0
+hypothesis==6.112.2
+slowapi==0.1.9
 
 # Optional: For local model support
 # llama-cpp-python==0.2.20

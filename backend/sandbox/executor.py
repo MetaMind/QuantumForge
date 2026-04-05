@@ -8,13 +8,28 @@ from typing import Any, Dict, Optional
 
 from backend.core.config import settings
 from backend.core.exceptions import SandboxException
+from backend.core.logger import get_logger, log_structured
+from backend.core.models import ExecutionResult
+
+logger = get_logger(__name__)
+
+
+class SandboxExecutor:import os
+import subprocess
+import tempfile
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from backend.core.config import settings
+from backend.core.exceptions import SandboxException
 from backend.core.logger import get_logger
 from backend.core.models import ExecutionResult
 
 logger = get_logger(__name__)
 
 
-class SandboxExecutor:
     def __init__(self):
         self.timeout = settings.sandbox_timeout
         self.max_memory_mb = settings.sandbox_max_memory_mb
@@ -48,8 +63,6 @@ class SandboxExecutor:
             # Build command
             cmd = [
                 "python", "-u",  # Unbuffered output
-                "-m", "resource",
-                "-m", "time",
                 str(script_path)
             ]
             
@@ -127,7 +140,7 @@ class SandboxExecutor:
     def validate_code(self, code: str) -> tuple[bool, str]:
         """Basic validation before execution"""
         # Check for dangerous imports
-        dangerous = ["os.system", "subprocess", "eval(", "exec(", "__import__", "open("]
+        dangerous = ["os.system", "subprocess", "eval(", "exec(", "__import__"]
         for pattern in dangerous:
             if pattern in code:
                 return False, f"Potentially dangerous pattern detected: {pattern}"

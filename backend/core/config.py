@@ -1,9 +1,8 @@
 import os
 import json
-from functools import lru_cache
 from typing import List, Optional, Any
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -102,9 +101,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
 
+    # CORS
+    cors_origins: List[str] = Field(default=["*"])
 
-@lru_cache()
+
 def get_settings() -> Settings:
+    # Note: not cached — env var changes take effect on next call.
+    # Restart the server to pick up changes in production.
     return Settings()
 
 

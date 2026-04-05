@@ -1,3 +1,4 @@
+import hashlib
 import os
 import pickle
 from typing import Dict, List, Optional, Tuple
@@ -31,16 +32,21 @@ class SimpleEmbedding:
     def embed(self, text: str) -> np.ndarray:
         tokens = self._tokenize(text)
         vector = np.zeros(self.dim)
-        
+
+        # Multi-hash strategy: each token contributes to multiple dimensions
+        # using different hash seeds, reducing collision probability
+        seeds = [0, 1, 2]
         for token in tokens:
-            idx = self._get_or_create_idx(token) % self.dim
-            vector[idx] += 1
-        
+            for seed in seeds:
+                h = hashlib.md5(f"{seed}:{token}".encode()).digest()
+                idx = int.from_bytes(h[:4], "little") % self.dim
+                vector[idx] += 1.0 / len(seeds)
+
         # Normalize
         norm = np.linalg.norm(vector)
         if norm > 0:
             vector = vector / norm
-        
+
         return vector.astype(np.float32)
 
 
@@ -99,13 +105,29 @@ class VectorStore:
     def delete(self, entry_id: str) -> bool:
         if entry_id not in self.index_map:
             return False
-        
-        idx = self.index_map[entry_id]
-        
-        # Mark for deletion (lazy deletion)
-        self.metadata[idx]["_deleted"] = True
-        self.vectors[idx] = np.zeros(self.embedding_dim)
-        
+
+        # Compact: rebuild store excluding the deleted entry
+        new_vectors = []
+        new_metadata = []
+        new_index_map = {}
+
+        for old_id, idx in self.index_map.items():
+            if old_id == entry_id:
+                continue
+            meta = self.metadata[idx]
+            if meta.get("_deleted"):
+                continue
+            new_idx = len(new_metadata)
+            new_vectors.append(self.vectors[idx])
+            new_metadata.append(meta)
+            new_index_map[old_id] = new_idx
+
+        self.vectors = np.array(new_vectors, dtype=np.float32).reshape(
+            len(new_vectors), self.embedding_dim
+        ) if new_vectors else np.zeros((0, self.embedding_dim), dtype=np.float32)
+        self.metadata = new_metadata
+        self.index_map = new_index_map
+
         self._save()
         return True
     
@@ -118,8 +140,11 @@ class VectorStore:
                 "vocab": self.embedder.vocab,
                 "next_idx": self.embedder.next_idx
             }
-            with open(os.path.join(self.store_path, "store.pkl"), "wb") as f:
+            store_file = os.path.join(self.store_path, "store.pkl")
+            tmp_file = store_file + ".tmp"
+            with open(tmp_file, "wb") as f:
                 pickle.dump(data, f)
+            os.replace(tmp_file, store_file)
         except Exception as e:
             raise MemoryException(f"Failed to save vector store: {e}")
     

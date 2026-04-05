@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    globals: true,
+  },
   plugins: [react()],
   resolve: {
     alias: {
@@ -15,13 +19,15 @@ export default defineConfig({
     strictPort: false,
     proxy: {
       '/api': {
-        target: 'http://localhost:8010',
+        target: 'http://localhost:8000',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/ws': {
-        target: 'ws://localhost:8010',
+        target: 'ws://localhost:8000',
         ws: true,
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ws/, '/ws'),
       },
     },
   },

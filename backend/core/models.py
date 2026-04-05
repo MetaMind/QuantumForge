@@ -78,7 +78,7 @@ class MemoryEntry(BaseModel):
     entry_id: str = Field(default_factory=lambda: f"mem_{datetime.utcnow().timestamp()}")
     task_description: str
     code: str
-    result: ExecutionResult
+    result: Optional[ExecutionResult] = None
     score: float
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     tags: List[str] = Field(default_factory=list)

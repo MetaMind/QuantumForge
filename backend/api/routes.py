@@ -3,11 +3,14 @@ import asyncio
 import uuid
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from backend.core.logger import get_logger, log_structured
 from backend.core.models import Task, TaskStatus, MemoryEntry, ExecutionResult
@@ -15,7 +18,6 @@ from backend.core.config import settings
 from backend.distributed.executor import distributed_executor
 from backend.memory.manager import MemoryManager
 from backend.optimization.evolution import PromptEvolution
-from backend.optimization.scoring import ScoringEngine
 from backend.agents.planner import PlannerAgent
 from backend.agents.executor import ExecutorAgent
 from backend.agents.evaluator import EvaluatorAgent
@@ -97,9 +99,11 @@ class ConnectionManager:
 manager = ConnectionManager()
 memory_manager = MemoryManager()
 prompt_evolution = PromptEvolution()
-scoring_engine = ScoringEngine()
 sandbox = SandboxExecutor()
 active_tasks: Dict[str, Task] = {}
+
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -117,22 +121,26 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
- 
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 #Add CORS middleware - required for WebSocket
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 @app.post("/tasks", response_model=TaskResponse)
-async def create_task(request: TaskRequest, background_tasks: BackgroundTasks):
+@limiter.limit("10/minute")
+async def create_task(request: Request, task_request: TaskRequest, background_tasks: BackgroundTasks):
     """Create a new autonomous coding task"""
     task = Task(
         task_id=f"task_{uuid.uuid4().hex[:8]}",
-        description=request.description,
+        description=task_request.description,
         status=TaskStatus.PENDING
     )
     active_tasks[task.task_id] = task
@@ -147,12 +155,12 @@ async def create_task(request: TaskRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(
         execute_autonomous_task,
         task.task_id,
-        request
+        task_request
     )
     
     log_structured(logger, "info", "Task created", 
                   task_id=task.task_id, 
-                  description=request.description[:50])
+                  description=task_request.description[:50])
     
     return TaskResponse(
         task_id=task.task_id,
@@ -194,6 +202,39 @@ async def list_tasks(limit: int = 50, status: Optional[str] = None):
         "total": len(active_tasks)
     }
 
+@app.post("/seed")
+async def seed_task(payload: Dict[str, Any]):
+    """Inject a fully-formed mock task for UI development/demo purposes."""
+    try:
+        from backend.core.models import TaskStep
+        steps = [
+            TaskStep(
+                step_id=s.get("step_id", f"step_{i}"),
+                description=s.get("description", ""),
+                status=TaskStatus(s.get("status", "pending")),
+                attempts=s.get("attempts", []),
+                best_attempt=s.get("best_attempt"),
+                created_at=datetime.fromisoformat(s["created_at"]) if s.get("created_at") else datetime.utcnow(),
+                completed_at=datetime.fromisoformat(s["completed_at"]) if s.get("completed_at") else None,
+            )
+            for i, s in enumerate(payload.get("steps", []))
+        ]
+        task = Task(
+            task_id=payload.get("task_id", f"task_{uuid.uuid4().hex[:8]}"),
+            description=payload["description"],
+            status=TaskStatus(payload.get("status", "pending")),
+            steps=steps,
+            final_output=payload.get("final_output"),
+            metrics={k: float(v) for k, v in payload.get("metrics", {}).items()},
+            created_at=datetime.fromisoformat(payload["created_at"]) if payload.get("created_at") else datetime.utcnow(),
+            updated_at=datetime.fromisoformat(payload["updated_at"]) if payload.get("updated_at") else datetime.utcnow(),
+        )
+        active_tasks[task.task_id] = task
+        await manager.broadcast({"type": "task_created", "task": task.dict()})
+        return {"status": "seeded", "task_id": task.task_id}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.post("/memory/feedback")
 async def provide_feedback(request: FeedbackRequest):
     """Provide feedback to evolve prompts"""
@@ -217,7 +258,8 @@ async def health():
         "status": "healthy",
         "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
-        "active_tasks": len(active_tasks)
+        "active_tasks": len(active_tasks),
+        "ray_status": "available" if distributed_executor.initialized else "unavailable"
     }
 
 @app.get("/health/llm")
@@ -511,7 +553,10 @@ async def execute_autonomous_task(task_id: str, request: TaskRequest):
                 if not valid:
                     logger.warning(f"Fixed code failed validation: {msg}")
                 
-                current_result = sandbox.execute(fixed_code)
+                fix_results = await distributed_executor.execute_parallel(
+                    None, [{"code": fixed_code}]
+                )
+                current_result = fix_results[0]
                 
                 current_step.attempts.append({
                     "candidate_id": f"fix_{attempt}",
