@@ -429,3 +429,12 @@ MIT License — see [LICENSE](LICENSE).
 - [Anthropic](https://anthropic.com) for Claude models
 - [FastAPI](https://fastapi.tiangolo.com) for the excellent framework
 - [Ray](https://ray.io) for distributed computing
+
+---
+## Author
+
+**Vikas Budde**
+
+- LinkedIn: [linkedin.com/in/vikasbudde](https://in.linkedin.com/in/vikasbudde)
+- X (Twitter): [x.com/vickcodes](https://x.com/vickcodes)
+- Email: [vikas.budde@hotmail.com](mailto:vikas.budde@hotmail.com)
